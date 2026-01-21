@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ESP32 GPS Tracker</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #map { height: 500px; width: 100%; border-radius: 10px; }
+        body { font-family: sans-serif; text-align: center; background: #f4f4f4; }
+    </style>
+</head>
+<body>
+    <h1>Live GPS Tracking</h1>
+    <div id="map"></div>
+    <p>Last Update: <span id="time">Never</span></p>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Initialize the map (Centered on Tunisia)
+        const map = L.map('map').setView([36.8065, 10.1815], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        let marker = L.marker([36.8065, 10.1815]).addTo(map);
+
+        async function updateLocation() {
+            try {
+                // We will create this API endpoint next
+                const response = await fetch('/api/gps/latest');
+                const data = await response.json();
+                
+                if (data.latitude && data.longitude) {
+                    const lat = parseFloat(data.latitude);
+                    const lon = parseFloat(data.longitude);
+                    
+                    marker.setLatLng([lat, lon]);
+                    map.setView([lat, lon]);
+                    document.getElementById('time').innerText = new Date(data.created_at).toLocaleString();
+                }
+            } catch (err) { console.error("Error fetching location:", err); }
+        }
+
+        // Refresh location every 5 seconds
+        setInterval(updateLocation, 5000);
+        updateLocation();
+    </script>
+</body>
+</html>

@@ -17,6 +17,23 @@ const pool = mysql.createPool({
     ssl: { rejectUnauthorized: false } 
 });
 
+
+
+app.use(express.static('public')); // Serve the HTML file
+
+// API to get the newest position for the map
+app.get('/api/gps/latest', async (req, res) => {
+    try {
+        const [rows] = await pool.execute(
+            'SELECT latitude, longitude, created_at FROM gps_data ORDER BY created_at DESC LIMIT 1'
+        );
+        res.json(rows[0] || {});
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
 // The endpoint for your ESP32
 app.post('/api/gps/push', async (req, res) => {
     const { device_imei, latitude, longitude, speed, heading, battery_voltage } = req.body;
