@@ -4,169 +4,293 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GPS Tracking System - Live Map</title>
-    <!-- Leaflet CSS for maps -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- Bootstrap for styling -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
             margin: 0;
             padding: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f8f9fa;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .navbar {
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 1rem 0;
         }
         
         #map {
-            height: 75vh;
+            height: 600px;
             width: 100%;
-            border-radius: 8px;
+            border-radius: 10px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border: 3px solid white;
         }
         
-        .header {
-            background: linear-gradient(135deg, #2c3e50, #4a6491);
-            color: white;
-            padding: 20px 0;
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            background: rgba(255, 255, 255, 0.95);
         }
         
-        .data-card {
-            background: white;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 10px 0;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            border-left: 4px solid #4a6491;
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px 10px 0 0 !important;
+            padding: 15px 20px;
         }
         
         .status-indicator {
             display: inline-block;
-            width: 12px;
-            height: 12px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
             margin-right: 8px;
+            animation: pulse 2s infinite;
         }
         
-        .status-active {
-            background-color: #28a745;
-            box-shadow: 0 0 8px #28a745;
+        .status-online {
+            background-color: #10b981;
+            box-shadow: 0 0 10px #10b981;
         }
         
-        .status-inactive {
-            background-color: #dc3545;
+        .status-offline {
+            background-color: #ef4444;
         }
         
-        .refresh-btn {
-            background: linear-gradient(135deg, #4a6491, #2c3e50);
-            color: white;
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .coordinate-box {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 1.1em;
+            border-left: 4px solid #667eea;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: all 0.3s;
+            padding: 10px 25px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: transform 0.3s;
         }
         
-        .refresh-btn:hover {
+        .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .history-item {
+            border-left: 3px solid #667eea;
+            padding-left: 15px;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
         }
         
         .last-updated {
             font-size: 0.9em;
             color: #6c757d;
+            background: #f1f5f9;
+            padding: 8px 12px;
+            border-radius: 6px;
+            display: inline-block;
         }
         
-        .coordinate-box {
-            background: #e9ecef;
-            border-radius: 5px;
-            padding: 10px;
-            font-family: monospace;
-            font-size: 1.1em;
+        .info-badge {
+            background: #e0e7ff;
+            color: #4f46e5;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
         }
     </style>
 </head>
 <body>
-    <div class="header">
+    <!-- Navigation -->
+    <nav class="navbar">
         <div class="container">
-            <h1 class="mb-3">🚗 GPS Tracking System</h1>
-            <div class="d-flex align-items-center">
-                <span class="status-indicator status-active" id="statusIndicator"></span>
-                <span id="statusText">Loading GPS data...</span>
+            <div class="d-flex justify-content-between align-items-center w-100">
+                <div>
+                    <h3 class="mb-0" style="color: #4f46e5;">
+                        <i class="bi bi-geo-alt-fill"></i> GPS Tracking System
+                    </h3>
+                    <div class="d-flex align-items-center mt-2">
+                        <span class="status-indicator status-online" id="statusIndicator"></span>
+                        <small id="statusText" class="text-muted">Connecting to GPS service...</small>
+                    </div>
+                </div>
+                <div class="text-end">
+                    <span class="info-badge" id="lastUpdated">--:--:--</span>
+                </div>
             </div>
         </div>
-    </div>
+    </nav>
 
-    <div class="container">
-        <div class="row mb-4">
-            <div class="col-md-8">
-                <h3 class="mb-3">Live GPS Location Map</h3>
-                <div id="map"></div>
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <div class="row">
+            <!-- Map Column -->
+            <div class="col-lg-8 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-map"></i> Live GPS Location Map</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="map"></div>
+                    </div>
+                </div>
             </div>
             
-            <div class="col-md-4">
-                <h3 class="mb-3">Current GPS Data</h3>
-                <div class="data-card">
-                    <h5>📍 Location Coordinates</h5>
-                    <div class="coordinate-box mb-3">
-                        <div>Latitude: <span id="latitude">--.--</span>°</div>
-                        <div>Longitude: <span id="longitude">--.--</span>°</div>
+            <!-- Data Column -->
+            <div class="col-lg-4">
+                <!-- Current Location Card -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-geo"></i> Current Location</h5>
                     </div>
-                    
-                    <h5>📊 Additional Information</h5>
-                    <div class="mb-2">Speed: <span id="speed" class="fw-bold">--</span> km/h</div>
-                    <div class="mb-2">Direction: <span id="direction" class="fw-bold">--</span>°</div>
-                    <div class="mb-3">Altitude: <span id="altitude" class="fw-bold">--</span> m</div>
-                    
-                    <div class="last-updated mb-3">
-                        Last Updated: <span id="lastUpdated">--:--:--</span>
+                    <div class="card-body">
+                        <div class="coordinate-box mb-3">
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">Latitude:</span>
+                                <span id="latitude" class="fw-bold fs-5">--.--</span>
+                            </div>
+                            <div class="d-flex justify-content-between mt-2">
+                                <span class="text-muted">Longitude:</span>
+                                <span id="longitude" class="fw-bold fs-5">--.--</span>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <div class="p-3 bg-light rounded">
+                                    <small class="text-muted">Speed</small>
+                                    <h4 class="mb-0" id="speed">--</h4>
+                                    <small>km/h</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-3 bg-light rounded">
+                                    <small class="text-muted">Direction</small>
+                                    <h4 class="mb-0" id="direction">--</h4>
+                                    <small>degrees</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="p-3 bg-light rounded">
+                                <small class="text-muted">Battery Voltage</small>
+                                <h4 class="mb-0" id="battery">--.--</h4>
+                                <small>volts</small>
+                            </div>
+                        </div>
+                        
+                        <button id="refreshBtn" class="btn btn-primary w-100">
+                            <i class="bi bi-arrow-clockwise"></i> Refresh GPS Data
+                        </button>
                     </div>
-                    
-                    <button id="refreshBtn" class="refresh-btn w-100">
-                        🔄 Refresh GPS Data
-                    </button>
                 </div>
                 
-                <div class="data-card">
-                    <h5>📈 GPS Data History</h5>
-                    <p>Last 5 positions:</p>
-                    <div id="historyList" class="small">
-                        <div class="text-muted">No history available yet...</div>
+                <!-- History Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Positions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="historyList">
+                            <div class="text-center text-muted py-4">
+                                <i class="bi bi-clock" style="font-size: 2rem;"></i>
+                                <p class="mt-2">No history available yet</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ESP32 Info -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-wifi"></i> ESP32 Connection</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Send Data to ESP32:</h6>
+                                <div class="input-group mb-3">
+                                    <span class="input-group-text">POST</span>
+                                    <input type="text" class="form-control" id="apiUrl" readonly value="/api/gps/push">
+                                    <button class="btn btn-outline-primary" onclick="copyApiUrl()">Copy</button>
+                                </div>
+                                <small class="text-muted">Send JSON data to this endpoint from your ESP32</small>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Test Data Format:</h6>
+                                <pre class="bg-light p-3 rounded" style="font-size: 0.8em;">
+{
+  "device_imei": "123456789012345",
+  "latitude": 40.7128,
+  "longitude": -74.0060,
+  "speed": 50.5,
+  "heading": 180,
+  "battery_voltage": 3.7
+}</pre>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Leaflet JS for maps -->
+    <!-- Scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.json"></script>
     
     <script>
         // Global variables
         let map;
         let marker;
         let gpsHistory = [];
+        let updateInterval;
         
-        // Initialize the map
+        // Initialize map
         function initMap(lat = 40.7128, lng = -74.0060) {
             if (!map) {
-                map = L.map('map').setView([lat, lng], 13);
+                map = L.map('map').setView([lat, lng], 15);
                 
                 // Add OpenStreetMap tiles
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     attribution: '© OpenStreetMap contributors',
                     maxZoom: 19
                 }).addTo(map);
+                
+                console.log('🗺️ Map initialized');
             }
             
             return map;
         }
         
-        // Update the marker on the map
-        function updateMarker(lat, lng) {
-            // Remove existing marker if any
+        // Update marker on map
+        function updateMarker(lat, lng, popupText = 'Current GPS Position') {
+            // Remove existing marker
             if (marker) {
                 map.removeLayer(marker);
             }
@@ -174,112 +298,107 @@
             // Add new marker
             marker = L.marker([lat, lng])
                 .addTo(map)
-                .bindPopup(`Current GPS Position<br>Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}`)
+                .bindPopup(`<b>${popupText}</b><br>Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}`)
                 .openPopup();
             
             // Center map on new location
-            map.setView([lat, lng], 13);
+            map.setView([lat, lng], 15);
+            
+            // Add circle for accuracy
+            L.circle([lat, lng], {
+                color: '#4f46e5',
+                fillColor: '#4f46e5',
+                fillOpacity: 0.1,
+                radius: 20
+            }).addTo(map);
         }
         
-        // Fetch GPS data from your backend API
+        // Fetch GPS data from API
         async function fetchGPSData() {
             try {
-                // Update status to loading
-                document.getElementById('statusText').textContent = 'Fetching GPS data...';
+                updateStatus('Fetching GPS data...', 'status-online');
                 
-                // Try different possible API endpoints based on your project structure
-                // Since you mentioned Render, I'll assume your backend is on the same domain
-                let apiEndpoints = [
-                    '/api/gps/latest',
-                    '/gps/latest', 
-                    '/latest',
-                    'api/latest'
-                ];
+                const response = await fetch('/api/gps/latest');
                 
-                let data = null;
-                
-                // Try each endpoint until one works
-                for (const endpoint of apiEndpoints) {
-                    try {
-                        const response = await fetch(endpoint);
-                        if (response.ok) {
-                            data = await response.json();
-                            break;
-                        }
-                    } catch (e) {
-                        console.log(`Endpoint ${endpoint} failed, trying next...`);
-                    }
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
                 }
                 
-                // If no endpoint worked, try a fallback with mock data for testing
-                if (!data) {
-                    console.log("No API endpoint responded, using mock data for testing");
-                    data = {
-                        latitude: 40.7128 + (Math.random() - 0.5) * 0.01,
-                        longitude: -74.0060 + (Math.random() - 0.5) * 0.01,
-                        speed: Math.floor(Math.random() * 100),
-                        direction: Math.floor(Math.random() * 360),
-                        altitude: Math.floor(Math.random() * 100),
-                        timestamp: new Date().toISOString()
-                    };
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
                 }
                 
                 return data;
                 
             } catch (error) {
                 console.error('Error fetching GPS data:', error);
-                // Update status to error
-                document.getElementById('statusText').textContent = 'Error fetching GPS data';
-                document.getElementById('statusIndicator').className = 'status-indicator status-inactive';
-                throw error;
+                updateStatus('Error fetching data', 'status-offline');
+                
+                // Return test data if API fails
+                return {
+                    latitude: 40.7128 + (Math.random() - 0.5) * 0.01,
+                    longitude: -74.0060 + (Math.random() - 0.5) * 0.01,
+                    speed: Math.floor(Math.random() * 100),
+                    direction: Math.floor(Math.random() * 360),
+                    battery_voltage: (3 + Math.random()).toFixed(2),
+                    timestamp: new Date().toISOString(),
+                    message: 'Using test data - API not responding'
+                };
             }
         }
         
-        // Update the UI with GPS data
+        // Update UI with GPS data
         function updateUI(gpsData) {
             // Update status
-            document.getElementById('statusText').textContent = 'GPS Data Active';
-            document.getElementById('statusIndicator').className = 'status-indicator status-active';
+            updateStatus('GPS Data Active', 'status-online');
             
             // Update coordinates
             document.getElementById('latitude').textContent = gpsData.latitude.toFixed(6);
             document.getElementById('longitude').textContent = gpsData.longitude.toFixed(6);
             
-            // Update other data if available
-            if (gpsData.speed !== undefined) {
-                document.getElementById('speed').textContent = gpsData.speed;
-            }
-            
-            if (gpsData.direction !== undefined) {
-                document.getElementById('direction').textContent = gpsData.direction;
-            }
-            
-            if (gpsData.altitude !== undefined) {
-                document.getElementById('altitude').textContent = gpsData.altitude;
-            }
+            // Update other data
+            document.getElementById('speed').textContent = gpsData.speed || '--';
+            document.getElementById('direction').textContent = gpsData.direction || '--';
+            document.getElementById('battery').textContent = gpsData.battery_voltage || '--.--';
             
             // Update timestamp
             const now = gpsData.timestamp ? new Date(gpsData.timestamp) : new Date();
             document.getElementById('lastUpdated').textContent = now.toLocaleTimeString();
             
-            // Initialize map if not already done
+            // Initialize or update map
             if (!map) {
                 initMap(gpsData.latitude, gpsData.longitude);
             }
             
-            // Update marker on map
-            updateMarker(gpsData.latitude, gpsData.longitude);
+            // Update marker
+            updateMarker(gpsData.latitude, gpsData.longitude, 'Current GPS Position');
             
             // Add to history
             addToHistory(gpsData);
         }
         
-        // Add GPS data to history list
+        // Update status indicator
+        function updateStatus(text, className) {
+            const indicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            
+            indicator.className = 'status-indicator ' + className;
+            statusText.textContent = text;
+        }
+        
+        // Add to history list
         function addToHistory(gpsData) {
             const historyEntry = {
                 lat: gpsData.latitude.toFixed(6),
                 lng: gpsData.longitude.toFixed(6),
-                time: new Date(gpsData.timestamp || new Date()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                speed: gpsData.speed || 0,
+                time: new Date(gpsData.timestamp || new Date()).toLocaleTimeString([], { 
+                    hour: '2-digit', 
+                    minute: '2-digit',
+                    second: '2-digit' 
+                })
             };
             
             // Add to beginning of array
@@ -294,22 +413,32 @@
             updateHistoryDisplay();
         }
         
-        // Update the history list in the UI
+        // Update history display
         function updateHistoryDisplay() {
             const historyList = document.getElementById('historyList');
             
             if (gpsHistory.length === 0) {
-                historyList.innerHTML = '<div class="text-muted">No history available yet...</div>';
+                historyList.innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-clock" style="font-size: 2rem;"></i>
+                        <p class="mt-2">No history available yet</p>
+                    </div>
+                `;
                 return;
             }
             
             let html = '';
             gpsHistory.forEach((entry, index) => {
                 html += `
-                    <div class="mb-2 p-2 bg-light rounded">
-                        <div class="fw-bold">Position ${index + 1}</div>
-                        <div>${entry.lat}, ${entry.lng}</div>
-                        <div class="text-muted small">${entry.time}</div>
+                    <div class="history-item">
+                        <div class="d-flex justify-content-between">
+                            <span class="fw-bold">Position ${index + 1}</span>
+                            <small class="text-muted">${entry.time}</small>
+                        </div>
+                        <div class="small">${entry.lat}, ${entry.lng}</div>
+                        <div class="mt-1">
+                            <span class="badge bg-light text-dark me-2">Speed: ${entry.speed} km/h</span>
+                        </div>
                     </div>
                 `;
             });
@@ -317,26 +446,48 @@
             historyList.innerHTML = html;
         }
         
-        // Main function to load and display GPS data
+        // Copy API URL to clipboard
+        function copyApiUrl() {
+            const apiUrl = document.getElementById('apiUrl');
+            navigator.clipboard.writeText(apiUrl.value).then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = 'Copied!';
+                btn.classList.remove('btn-outline-primary');
+                btn.classList.add('btn-success');
+                
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-outline-primary');
+                }, 2000);
+            });
+        }
+        
+        // Load GPS data
         async function loadGPSData() {
             try {
                 const gpsData = await fetchGPSData();
                 updateUI(gpsData);
             } catch (error) {
                 console.error('Failed to load GPS data:', error);
-                // Initialize map with default location if data fetch fails
+                // Initialize map with default location
                 if (!map) {
                     initMap();
                 }
             }
         }
         
-        // Auto-refresh every 10 seconds
-        function startAutoRefresh(interval = 10000) {
-            setInterval(loadGPSData, interval);
+        // Start auto-refresh
+        function startAutoRefresh(interval = 5000) {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
+            
+            updateInterval = setInterval(loadGPSData, interval);
         }
         
-        // Initialize when page loads
+        // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             // Load initial GPS data
             loadGPSData();
@@ -344,8 +495,13 @@
             // Set up refresh button
             document.getElementById('refreshBtn').addEventListener('click', loadGPSData);
             
-            // Start auto-refresh after initial load
-            setTimeout(() => startAutoRefresh(), 2000);
+            // Start auto-refresh
+            startAutoRefresh();
+            
+            // Initialize map with default location
+            initMap();
+            
+            console.log('🚀 GPS Tracking System initialized');
         });
     </script>
 </body>
