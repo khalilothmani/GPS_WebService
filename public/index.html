@@ -6,19 +6,40 @@
     <title>GPS Tracking System - Live Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
+        :root {
+            --primary-color: #4f46e5;
+            --secondary-color: #7c3aed;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --dark-color: #1f2937;
+            --light-color: #f9fafb;
+        }
+        
         body {
             margin: 0;
             padding: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--light-color);
+            color: var(--dark-color);
             min-height: 100vh;
         }
         
         .navbar {
-            background: rgba(255, 255, 255, 0.95);
+            background: white;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+            color: var(--primary-color);
+            font-size: 1.5rem;
         }
         
         #map {
@@ -27,6 +48,7 @@
             border-radius: 10px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             border: 3px solid white;
+            z-index: 1;
         }
         
         .card {
@@ -34,14 +56,20 @@
             border-radius: 10px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             margin-bottom: 20px;
-            background: rgba(255, 255, 255, 0.95);
+            background: white;
+            transition: transform 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
         }
         
         .card-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             color: white;
             border-radius: 10px 10px 0 0 !important;
             padding: 15px 20px;
+            font-weight: 600;
         }
         
         .status-indicator {
@@ -54,12 +82,12 @@
         }
         
         .status-online {
-            background-color: #10b981;
-            box-shadow: 0 0 10px #10b981;
+            background-color: var(--success-color);
+            box-shadow: 0 0 10px var(--success-color);
         }
         
         .status-offline {
-            background-color: #ef4444;
+            background-color: var(--danger-color);
         }
         
         @keyframes pulse {
@@ -69,53 +97,113 @@
         }
         
         .coordinate-box {
-            background: #f8f9fa;
+            background: var(--light-color);
             border-radius: 8px;
             padding: 15px;
             font-family: 'Courier New', monospace;
             font-size: 1.1em;
-            border-left: 4px solid #667eea;
+            border-left: 4px solid var(--primary-color);
         }
         
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             border: none;
-            padding: 10px 25px;
+            padding: 10px 20px;
             border-radius: 8px;
             font-weight: 600;
-            transition: transform 0.3s;
+            transition: all 0.3s;
         }
         
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+        }
+        
+        .data-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .data-item:last-child {
+            border-bottom: none;
+        }
+        
+        .data-label {
+            color: #6b7280;
+            font-weight: 500;
+        }
+        
+        .data-value {
+            font-weight: 700;
+            color: var(--dark-color);
         }
         
         .history-item {
-            border-left: 3px solid #667eea;
-            padding-left: 15px;
+            background: var(--light-color);
+            border-radius: 8px;
+            padding: 12px;
             margin-bottom: 10px;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 5px;
+            border-left: 3px solid var(--primary-color);
+            transition: all 0.3s;
+        }
+        
+        .history-item:hover {
+            background: #e0e7ff;
+            transform: translateX(5px);
         }
         
         .last-updated {
-            font-size: 0.9em;
-            color: #6c757d;
-            background: #f1f5f9;
-            padding: 8px 12px;
-            border-radius: 6px;
-            display: inline-block;
+            background: #e0e7ff;
+            color: var(--primary-color);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
         }
         
-        .info-badge {
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stats-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+        
+        .stats-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        
+        .device-badge {
             background: #e0e7ff;
-            color: #4f46e5;
+            color: var(--primary-color);
             padding: 4px 12px;
             border-radius: 20px;
             font-size: 0.85em;
             font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .leaflet-popup-content {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .leaflet-popup-content b {
+            color: var(--primary-color);
         }
     </style>
 </head>
@@ -124,17 +212,25 @@
     <nav class="navbar">
         <div class="container">
             <div class="d-flex justify-content-between align-items-center w-100">
-                <div>
-                    <h3 class="mb-0" style="color: #4f46e5;">
-                        <i class="bi bi-geo-alt-fill"></i> GPS Tracking System
-                    </h3>
-                    <div class="d-flex align-items-center mt-2">
-                        <span class="status-indicator status-online" id="statusIndicator"></span>
-                        <small id="statusText" class="text-muted">Connecting to GPS service...</small>
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-geo-alt-fill me-2" style="font-size: 1.8rem; color: var(--primary-color);"></i>
+                    <div>
+                        <h1 class="navbar-brand mb-0">GPS Tracking System</h1>
+                        <div class="d-flex align-items-center">
+                            <span class="status-indicator status-online" id="statusIndicator"></span>
+                            <small id="statusText" class="text-muted">Connecting...</small>
+                        </div>
                     </div>
                 </div>
-                <div class="text-end">
-                    <span class="info-badge" id="lastUpdated">--:--:--</span>
+                <div class="d-flex align-items-center">
+                    <span class="last-updated me-3">
+                        <i class="bi bi-clock"></i>
+                        <span id="lastUpdated">--:--:--</span>
+                    </span>
+                    <span class="device-badge">
+                        <i class="bi bi-wifi"></i>
+                        <span id="deviceCount">0 Devices</span>
+                    </span>
                 </div>
             </div>
         </div>
@@ -147,7 +243,7 @@
             <div class="col-lg-8 mb-4">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-map"></i> Live GPS Location Map</h5>
+                        <h5 class="mb-0"><i class="bi bi-map me-2"></i>Live GPS Location Map</h5>
                     </div>
                     <div class="card-body">
                         <div id="map"></div>
@@ -157,60 +253,65 @@
             
             <!-- Data Column -->
             <div class="col-lg-4">
-                <!-- Current Location Card -->
+                <!-- Current Location -->
                 <div class="card mb-4">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-geo"></i> Current Location</h5>
+                        <h5 class="mb-0"><i class="bi bi-geo me-2"></i>Current Location</h5>
                     </div>
                     <div class="card-body">
                         <div class="coordinate-box mb-3">
-                            <div class="d-flex justify-content-between">
-                                <span class="text-muted">Latitude:</span>
-                                <span id="latitude" class="fw-bold fs-5">--.--</span>
+                            <div class="data-item">
+                                <span class="data-label">Latitude:</span>
+                                <span id="latitude" class="data-value">--.--</span>
                             </div>
-                            <div class="d-flex justify-content-between mt-2">
-                                <span class="text-muted">Longitude:</span>
-                                <span id="longitude" class="fw-bold fs-5">--.--</span>
+                            <div class="data-item">
+                                <span class="data-label">Longitude:</span>
+                                <span id="longitude" class="data-value">--.--</span>
                             </div>
                         </div>
                         
                         <div class="row mb-3">
                             <div class="col-6">
                                 <div class="p-3 bg-light rounded">
-                                    <small class="text-muted">Speed</small>
-                                    <h4 class="mb-0" id="speed">--</h4>
-                                    <small>km/h</small>
+                                    <div class="data-label">Speed</div>
+                                    <div class="stats-value" id="speed">--</div>
+                                    <div class="data-label">km/h</div>
                                 </div>
                             </div>
                             <div class="col-6">
                                 <div class="p-3 bg-light rounded">
-                                    <small class="text-muted">Direction</small>
-                                    <h4 class="mb-0" id="direction">--</h4>
-                                    <small>degrees</small>
+                                    <div class="data-label">Direction</div>
+                                    <div class="stats-value" id="direction">--</div>
+                                    <div class="data-label">degrees</div>
                                 </div>
                             </div>
                         </div>
                         
                         <div class="mb-3">
                             <div class="p-3 bg-light rounded">
-                                <small class="text-muted">Battery Voltage</small>
-                                <h4 class="mb-0" id="battery">--.--</h4>
-                                <small>volts</small>
+                                <div class="data-label">Battery Voltage</div>
+                                <div class="stats-value" id="battery">--.--</div>
+                                <div class="data-label">volts</div>
                             </div>
                         </div>
                         
-                        <button id="refreshBtn" class="btn btn-primary w-100">
-                            <i class="bi bi-arrow-clockwise"></i> Refresh GPS Data
-                        </button>
+                        <div class="d-grid gap-2">
+                            <button id="refreshBtn" class="btn btn-primary">
+                                <i class="bi bi-arrow-clockwise"></i> Refresh Now
+                            </button>
+                            <button id="autoRefreshBtn" class="btn btn-outline-primary">
+                                <i class="bi bi-play-circle"></i> Auto Refresh: ON
+                            </button>
+                        </div>
                     </div>
                 </div>
                 
-                <!-- History Card -->
-                <div class="card">
+                <!-- History -->
+                <div class="card mb-4">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Positions</h5>
+                        <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Recent Positions</h5>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body" style="max-height: 300px; overflow-y: auto;">
                         <div id="historyList">
                             <div class="text-center text-muted py-4">
                                 <i class="bi bi-clock" style="font-size: 2rem;"></i>
@@ -219,36 +320,72 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Stats -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Statistics</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-6 mb-3">
+                                <div class="stats-card">
+                                    <i class="bi bi-device-ssd" style="font-size: 1.5rem;"></i>
+                                    <div class="stats-value" id="totalDevices">0</div>
+                                    <div class="stats-label">Devices</div>
+                                </div>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <div class="stats-card">
+                                    <i class="bi bi-database" style="font-size: 1.5rem;"></i>
+                                    <div class="stats-value" id="totalPoints">0</div>
+                                    <div class="stats-label">Data Points</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-center">
+                            <button class="btn btn-sm btn-outline-danger" onclick="clearAllData()">
+                                <i class="bi bi-trash"></i> Clear All Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         
-        <!-- ESP32 Info -->
+        <!-- System Info -->
         <div class="row mt-4">
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-wifi"></i> ESP32 Connection</h5>
+                        <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>System Information</h5>
                     </div>
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-6">
-                                <h6>Send Data to ESP32:</h6>
-                                <div class="input-group mb-3">
-                                    <span class="input-group-text">POST</span>
-                                    <input type="text" class="form-control" id="apiUrl" readonly value="/api/gps/push">
-                                    <button class="btn btn-outline-primary" onclick="copyApiUrl()">Copy</button>
+                                <h6>API Endpoints:</h6>
+                                <div class="mb-3">
+                                    <code>POST /api/gps/push</code>
+                                    <small class="text-muted d-block">Send GPS data from ESP32</small>
                                 </div>
-                                <small class="text-muted">Send JSON data to this endpoint from your ESP32</small>
+                                <div class="mb-3">
+                                    <code>GET /api/gps/latest</code>
+                                    <small class="text-muted d-block">Get latest GPS position</small>
+                                </div>
+                                <div class="mb-3">
+                                    <code>GET /api/health</code>
+                                    <small class="text-muted d-block">System health check</small>
+                                </div>
                             </div>
                             <div class="col-md-6">
-                                <h6>Test Data Format:</h6>
+                                <h6>ESP32 Data Format:</h6>
                                 <pre class="bg-light p-3 rounded" style="font-size: 0.8em;">
 {
-  "device_imei": "123456789012345",
-  "latitude": 40.7128,
-  "longitude": -74.0060,
-  "speed": 50.5,
-  "heading": 180,
+  "device_imei": "ESP32_GPS_001",
+  "latitude": 36.40197,
+  "longitude": 10.61479,
+  "speed": 8.61,
+  "heading": 290.82,
   "battery_voltage": 3.7
 }</pre>
                             </div>
@@ -262,17 +399,18 @@
     <!-- Scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.json"></script>
     
     <script>
         // Global variables
         let map;
         let marker;
         let gpsHistory = [];
-        let updateInterval;
+        let isAutoRefresh = true;
+        let refreshInterval;
+        let lastUpdateTime = null;
         
         // Initialize map
-        function initMap(lat = 40.7128, lng = -74.0060) {
+        function initMap(lat = 36.8065, lng = 10.1815) {
             if (!map) {
                 map = L.map('map').setView([lat, lng], 15);
                 
@@ -282,90 +420,108 @@
                     maxZoom: 19
                 }).addTo(map);
                 
-                console.log('🗺️ Map initialized');
+                console.log('🗺️ Map initialized at:', lat, lng);
             }
-            
             return map;
         }
         
         // Update marker on map
-        function updateMarker(lat, lng, popupText = 'Current GPS Position') {
+        function updateMarker(lat, lng) {
+            const popupContent = `
+                <b>GPS Position</b><br>
+                Latitude: ${lat.toFixed(6)}<br>
+                Longitude: ${lng.toFixed(6)}<br>
+                Time: ${new Date().toLocaleTimeString()}
+            `;
+            
             // Remove existing marker
             if (marker) {
                 map.removeLayer(marker);
             }
             
-            // Add new marker
-            marker = L.marker([lat, lng])
-                .addTo(map)
-                .bindPopup(`<b>${popupText}</b><br>Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}`)
-                .openPopup();
+            // Add new marker with custom icon
+            marker = L.marker([lat, lng], {
+                icon: L.divIcon({
+                    className: 'custom-marker',
+                    html: '<div style="background-color: #4f46e5; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>',
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                })
+            })
+            .addTo(map)
+            .bindPopup(popupContent)
+            .openPopup();
             
-            // Center map on new location
-            map.setView([lat, lng], 15);
+            // Center map on new location with animation
+            map.setView([lat, lng], 15, {
+                animate: true,
+                duration: 1
+            });
             
-            // Add circle for accuracy
+            // Add accuracy circle
             L.circle([lat, lng], {
                 color: '#4f46e5',
                 fillColor: '#4f46e5',
                 fillOpacity: 0.1,
-                radius: 20
+                radius: 30
             }).addTo(map);
         }
         
-        // Fetch GPS data from API
+        // Fetch GPS data
         async function fetchGPSData() {
             try {
-                updateStatus('Fetching GPS data...', 'status-online');
+                updateStatus('Fetching data...', 'status-online');
                 
-                const response = await fetch('/api/gps/latest');
+                const response = await fetch('/api/gps/latest?_=' + new Date().getTime(), {
+                    headers: {
+                        'Cache-Control': 'no-cache'
+                    }
+                });
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
                 }
                 
                 const data = await response.json();
-                
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-                
                 return data;
                 
             } catch (error) {
                 console.error('Error fetching GPS data:', error);
-                updateStatus('Error fetching data', 'status-offline');
-                
-                // Return test data if API fails
-                return {
-                    latitude: 40.7128 + (Math.random() - 0.5) * 0.01,
-                    longitude: -74.0060 + (Math.random() - 0.5) * 0.01,
-                    speed: Math.floor(Math.random() * 100),
-                    direction: Math.floor(Math.random() * 360),
-                    battery_voltage: (3 + Math.random()).toFixed(2),
-                    timestamp: new Date().toISOString(),
-                    message: 'Using test data - API not responding'
-                };
+                updateStatus('Connection error', 'status-offline');
+                return null;
             }
         }
         
         // Update UI with GPS data
         function updateUI(gpsData) {
+            if (!gpsData) return;
+            
+            // Check if this is new data
+            if (lastUpdateTime === gpsData.timestamp) {
+                return; // Same data, skip update
+            }
+            lastUpdateTime = gpsData.timestamp;
+            
             // Update status
-            updateStatus('GPS Data Active', 'status-online');
+            updateStatus('Active', 'status-online');
             
             // Update coordinates
             document.getElementById('latitude').textContent = gpsData.latitude.toFixed(6);
             document.getElementById('longitude').textContent = gpsData.longitude.toFixed(6);
             
             // Update other data
-            document.getElementById('speed').textContent = gpsData.speed || '--';
-            document.getElementById('direction').textContent = gpsData.direction || '--';
-            document.getElementById('battery').textContent = gpsData.battery_voltage || '--.--';
+            document.getElementById('speed').textContent = (gpsData.speed || 0).toFixed(1);
+            document.getElementById('direction').textContent = (gpsData.direction || 0).toFixed(0);
+            document.getElementById('battery').textContent = (gpsData.battery_voltage || 0).toFixed(2);
             
             // Update timestamp
-            const now = gpsData.timestamp ? new Date(gpsData.timestamp) : new Date();
-            document.getElementById('lastUpdated').textContent = now.toLocaleTimeString();
+            const time = gpsData.timestamp ? new Date(gpsData.timestamp) : new Date();
+            const timeStr = time.toLocaleTimeString([], { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit' 
+            });
+            document.getElementById('lastUpdated').textContent = timeStr;
             
             // Initialize or update map
             if (!map) {
@@ -373,7 +529,7 @@
             }
             
             // Update marker
-            updateMarker(gpsData.latitude, gpsData.longitude, 'Current GPS Position');
+            updateMarker(gpsData.latitude, gpsData.longitude);
             
             // Add to history
             addToHistory(gpsData);
@@ -388,28 +544,26 @@
             statusText.textContent = text;
         }
         
-        // Add to history list
+        // Add to history
         function addToHistory(gpsData) {
             const historyEntry = {
                 lat: gpsData.latitude.toFixed(6),
                 lng: gpsData.longitude.toFixed(6),
                 speed: gpsData.speed || 0,
+                direction: gpsData.direction || 0,
                 time: new Date(gpsData.timestamp || new Date()).toLocaleTimeString([], { 
                     hour: '2-digit', 
-                    minute: '2-digit',
-                    second: '2-digit' 
+                    minute: '2-digit' 
                 })
             };
             
-            // Add to beginning of array
             gpsHistory.unshift(historyEntry);
             
-            // Keep only last 5 entries
-            if (gpsHistory.length > 5) {
-                gpsHistory = gpsHistory.slice(0, 5);
+            // Keep only last 10 entries
+            if (gpsHistory.length > 10) {
+                gpsHistory = gpsHistory.slice(0, 10);
             }
             
-            // Update history display
             updateHistoryDisplay();
         }
         
@@ -437,7 +591,8 @@
                         </div>
                         <div class="small">${entry.lat}, ${entry.lng}</div>
                         <div class="mt-1">
-                            <span class="badge bg-light text-dark me-2">Speed: ${entry.speed} km/h</span>
+                            <span class="badge bg-light text-dark me-2">Speed: ${entry.speed.toFixed(1)} km/h</span>
+                            <span class="badge bg-light text-dark">Dir: ${entry.direction.toFixed(0)}°</span>
                         </div>
                     </div>
                 `;
@@ -446,60 +601,110 @@
             historyList.innerHTML = html;
         }
         
-        // Copy API URL to clipboard
-        function copyApiUrl() {
-            const apiUrl = document.getElementById('apiUrl');
-            navigator.clipboard.writeText(apiUrl.value).then(() => {
-                const btn = event.target;
-                const originalText = btn.textContent;
-                btn.textContent = 'Copied!';
-                btn.classList.remove('btn-outline-primary');
-                btn.classList.add('btn-success');
+        // Load statistics
+        async function loadStatistics() {
+            try {
+                const response = await fetch('/api/health');
+                const data = await response.json();
                 
-                setTimeout(() => {
-                    btn.textContent = originalText;
-                    btn.classList.remove('btn-success');
-                    btn.classList.add('btn-outline-primary');
-                }, 2000);
-            });
+                if (data.database) {
+                    document.getElementById('totalDevices').textContent = data.database.devices || 0;
+                    document.getElementById('totalPoints').textContent = data.database.data_points || 0;
+                    document.getElementById('deviceCount').textContent = `${data.database.devices || 0} Devices`;
+                }
+            } catch (error) {
+                console.error('Error loading statistics:', error);
+            }
         }
         
-        // Load GPS data
-        async function loadGPSData() {
-            try {
-                const gpsData = await fetchGPSData();
+        // Update GPS data
+        async function updateGPSData() {
+            const gpsData = await fetchGPSData();
+            if (gpsData) {
                 updateUI(gpsData);
-            } catch (error) {
-                console.error('Failed to load GPS data:', error);
-                // Initialize map with default location
-                if (!map) {
-                    initMap();
-                }
+                console.log('🔄 Updated:', {
+                    lat: gpsData.latitude,
+                    lng: gpsData.longitude,
+                    time: new Date().toLocaleTimeString()
+                });
+            }
+        }
+        
+        // Toggle auto-refresh
+        function toggleAutoRefresh() {
+            isAutoRefresh = !isAutoRefresh;
+            const btn = document.getElementById('autoRefreshBtn');
+            
+            if (isAutoRefresh) {
+                btn.innerHTML = '<i class="bi bi-pause-circle"></i> Auto Refresh: ON';
+                btn.classList.remove('btn-outline-danger');
+                btn.classList.add('btn-outline-primary');
+                startAutoRefresh();
+            } else {
+                btn.innerHTML = '<i class="bi bi-play-circle"></i> Auto Refresh: OFF';
+                btn.classList.remove('btn-outline-primary');
+                btn.classList.add('btn-outline-danger');
+                stopAutoRefresh();
             }
         }
         
         // Start auto-refresh
-        function startAutoRefresh(interval = 5000) {
-            if (updateInterval) {
-                clearInterval(updateInterval);
-            }
-            
-            updateInterval = setInterval(loadGPSData, interval);
+        function startAutoRefresh(interval = 3000) {
+            if (refreshInterval) clearInterval(refreshInterval);
+            refreshInterval = setInterval(updateGPSData, interval);
         }
         
-        // Initialize on page load
+        // Stop auto-refresh
+        function stopAutoRefresh() {
+            if (refreshInterval) clearInterval(refreshInterval);
+        }
+        
+        // Clear all data
+        async function clearAllData() {
+            if (!confirm('Are you sure you want to clear ALL data? This cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/clear', { method: 'DELETE' });
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('All data cleared successfully!');
+                    location.reload();
+                }
+            } catch (error) {
+                alert('Error clearing data: ' + error.message);
+            }
+        }
+        
+        // Initialize
         document.addEventListener('DOMContentLoaded', function() {
-            // Load initial GPS data
-            loadGPSData();
+            // Initialize map
+            initMap();
+            
+            // Load initial data
+            updateGPSData();
+            loadStatistics();
             
             // Set up refresh button
-            document.getElementById('refreshBtn').addEventListener('click', loadGPSData);
+            document.getElementById('refreshBtn').addEventListener('click', async function() {
+                this.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Refreshing...';
+                await updateGPSData();
+                await loadStatistics();
+                setTimeout(() => {
+                    this.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Refresh Now';
+                }, 1000);
+            });
+            
+            // Set up auto-refresh toggle
+            document.getElementById('autoRefreshBtn').addEventListener('click', toggleAutoRefresh);
             
             // Start auto-refresh
             startAutoRefresh();
             
-            // Initialize map with default location
-            initMap();
+            // Update statistics every 30 seconds
+            setInterval(loadStatistics, 30000);
             
             console.log('🚀 GPS Tracking System initialized');
         });

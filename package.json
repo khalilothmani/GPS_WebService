@@ -1,11 +1,12 @@
 {
   "name": "gps-webservice",
   "version": "1.0.0",
-  "description": "GPS Tracking Web Service with ESP32 and Aiven MySQL",
+  "description": "GPS Tracking System with ESP32 and Aiven MySQL",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "test": "node test-api.js"
   },
   "dependencies": {
     "express": "^4.18.2",
@@ -13,10 +14,13 @@
     "cors": "^2.8.5",
     "dotenv": "^16.3.1"
   },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
   "engines": {
     "node": ">=16.0.0"
   },
-  "keywords": ["gps", "tracking", "esp32", "mysql", "aiven"],
+  "keywords": ["gps", "tracking", "esp32", "mysql", "aiven", "real-time"],
   "author": "Your Name",
   "license": "MIT"
 }

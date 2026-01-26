@@ -7,12 +7,16 @@ require('dotenv').config();
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST'],
+    credentials: true
+}));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-console.log('🚀 Starting GPS WebService...');
-console.log('📊 Loading environment variables...');
+console.log('🚀 GPS WebService Starting...');
 
 // Database Pool
 const pool = mysql.createPool({
@@ -21,119 +25,66 @@ const pool = mysql.createPool({
     password: process.env.DB_PASS,
     database: process.env.DB_NAME,
     port: process.env.DB_PORT,
-    ssl: { 
-        rejectUnauthorized: false 
-    },
+    ssl: { rejectUnauthorized: false },
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
     connectTimeout: 10000
 });
 
-// Test database connection on startup
-pool.getConnection()
-    .then(connection => {
-        console.log('✅ Database connected successfully!');
-        connection.release();
-        
-        // Check tables
-        return pool.execute("SHOW TABLES LIKE 'gps_%'");
-    })
-    .then(([tables]) => {
-        console.log('📋 Available GPS tables:', tables.map(t => t[Object.keys(t)[0]]));
-    })
-    .catch(err => {
-        console.error('❌ Database connection failed:', err.message);
-        console.error('💡 Make sure:');
-        console.error('   1. Aiven MySQL service is RUNNING (not paused)');
-        console.error('   2. .env file has correct credentials');
-        console.error('   3. Database hostname is correct');
-    });
-
-// API to get latest GPS data (for frontend map)
-app.get('/api/gps/latest', async (req, res) => {
+// Create tables if they don't exist
+async function createTables() {
     try {
-        console.log('📡 Fetching latest GPS data...');
+        console.log('🔧 Checking database tables...');
         
-        const [rows] = await pool.execute(
-            `SELECT 
-                latitude, 
-                longitude, 
-                speed, 
-                heading, 
-                battery_voltage,
-                created_at
-             FROM gps_data 
-             ORDER BY created_at DESC 
-             LIMIT 1`
-        );
+        // Create gps_devices table
+        await pool.execute(`
+            CREATE TABLE IF NOT EXISTS gps_devices (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                device_imei VARCHAR(50) UNIQUE NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_imei (device_imei)
+            )
+        `);
         
-        if (rows.length === 0) {
-            return res.json({
-                message: 'No GPS data available yet',
-                latitude: 40.7128,
-                longitude: -74.0060,
-                speed: 0,
-                direction: 0,
-                altitude: 0,
-                timestamp: new Date().toISOString()
-            });
-        }
+        // Create gps_data table
+        await pool.execute(`
+            CREATE TABLE IF NOT EXISTS gps_data (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                gps_id INT,
+                latitude DECIMAL(10, 8) NOT NULL,
+                longitude DECIMAL(11, 8) NOT NULL,
+                speed DECIMAL(5, 2) DEFAULT 0,
+                heading DECIMAL(5, 2) DEFAULT 0,
+                battery_voltage DECIMAL(4, 2) DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (gps_id) REFERENCES gps_devices(id) ON DELETE CASCADE,
+                INDEX idx_created_at (created_at),
+                INDEX idx_gps_id (gps_id)
+            )
+        `);
         
-        const data = rows[0];
-        console.log('📍 Latest GPS position:', {
-            lat: data.latitude,
-            lng: data.longitude,
-            speed: data.speed,
-            time: data.created_at
-        });
-        
-        res.json({
-            latitude: parseFloat(data.latitude),
-            longitude: parseFloat(data.longitude),
-            speed: data.speed || 0,
-            direction: data.heading || 0,
-            altitude: 0,
-            battery_voltage: data.battery_voltage,
-            timestamp: data.created_at || new Date().toISOString()
-        });
-        
+        console.log('✅ Database tables verified/created');
     } catch (err) {
-        console.error('❌ Error fetching GPS data:', err.message);
-        res.status(500).json({ 
-            error: 'Database error',
-            details: err.message 
-        });
+        console.error('❌ Error creating tables:', err.message);
     }
-});
+}
 
-// API to get GPS history (last 10 positions)
-app.get('/api/gps/history', async (req, res) => {
-    try {
-        const [rows] = await pool.execute(
-            `SELECT 
-                latitude, 
-                longitude, 
-                speed, 
-                heading,
-                created_at
-             FROM gps_data 
-             ORDER BY created_at DESC 
-             LIMIT 10`
-        );
-        
-        res.json(rows);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
+// Initialize database
+createTables();
 
-// ESP32 Data Push Endpoint
+// ESP32 Data Endpoint
 app.post('/api/gps/push', async (req, res) => {
-    console.log('📍 Received GPS data from ESP32:', req.body);
+    console.log('\n📍 Received GPS data from ESP32:');
+    console.log('   Device:', req.body.device_imei);
+    console.log('   Location:', req.body.latitude, req.body.longitude);
+    console.log('   Speed:', req.body.speed, 'km/h');
+    console.log('   Heading:', req.body.heading, '°');
     
     const { device_imei, latitude, longitude, speed, heading, battery_voltage } = req.body;
     
+    // Validate required fields
     if (!device_imei || !latitude || !longitude) {
         return res.status(400).json({ 
             error: 'Missing required fields',
@@ -142,24 +93,25 @@ app.post('/api/gps/push', async (req, res) => {
     }
     
     try {
+        let gps_id;
+        
         // Check if device exists
         const [devices] = await pool.execute(
             'SELECT id FROM gps_devices WHERE device_imei = ?',
-            [device_imei]
+            [device_imei.substring(0, 50)] // Ensure within VARCHAR(50) limit
         );
         
-        let gps_id;
-        
         if (devices.length === 0) {
-            console.log(`📱 Creating new device: ${device_imei}`);
-            // Insert new device
+            // Create new device
             const [insertResult] = await pool.execute(
                 'INSERT INTO gps_devices (device_imei) VALUES (?)',
-                [device_imei]
+                [device_imei.substring(0, 50)]
             );
             gps_id = insertResult.insertId;
+            console.log(`✅ Created new device ID: ${gps_id}`);
         } else {
             gps_id = devices[0].id;
+            console.log(`✅ Found existing device ID: ${gps_id}`);
         }
         
         // Insert GPS data
@@ -170,109 +122,180 @@ app.post('/api/gps/push', async (req, res) => {
             [gps_id, latitude, longitude, speed || 0, heading || 0, battery_voltage || 0]
         );
         
-        console.log('✅ GPS data saved successfully!');
+        console.log('✅ GPS data saved to database');
         console.log(`   Location: ${latitude}, ${longitude}`);
-        console.log(`   Device ID: ${gps_id}`);
         
         res.json({ 
             success: true,
-            message: 'GPS data saved',
-            device_id: gps_id
+            message: 'GPS data saved successfully',
+            device_id: gps_id,
+            timestamp: new Date().toISOString()
         });
         
     } catch (err) {
         console.error('❌ Database error:', err.message);
         
-        // Try to create tables if they don't exist
-        if (err.code === 'ER_NO_SUCH_TABLE') {
-            try {
-                console.log('🔄 Creating missing tables...');
-                await createTables();
-                
-                // Retry the insert
-                const [insertResult] = await pool.execute(
-                    'INSERT INTO gps_devices (device_imei) VALUES (?)',
-                    [device_imei]
-                );
-                const gps_id = insertResult.insertId;
-                
-                await pool.execute(
-                    `INSERT INTO gps_data 
-                        (gps_id, latitude, longitude, speed, heading, battery_voltage) 
-                     VALUES (?, ?, ?, ?, ?, ?)`,
-                    [gps_id, latitude, longitude, speed || 0, heading || 0, battery_voltage || 0]
-                );
-                
-                console.log('✅ Tables created and data saved!');
-                res.json({ 
-                    success: true,
-                    message: 'Tables created and data saved'
-                });
-                
-            } catch (createErr) {
-                console.error('❌ Failed to create tables:', createErr.message);
-                res.status(500).json({ 
-                    error: 'Table creation failed',
-                    details: createErr.message
-                });
-            }
-        } else {
+        // Try direct insert as fallback
+        try {
+            await pool.execute(
+                `INSERT INTO gps_data 
+                    (latitude, longitude, speed, heading, battery_voltage) 
+                 VALUES (?, ?, ?, ?, ?)`,
+                [latitude, longitude, speed || 0, heading || 0, battery_voltage || 0]
+            );
+            
+            console.log('✅ Saved without device mapping');
+            res.json({ 
+                success: true,
+                message: 'Data saved (no device mapping)'
+            });
+            
+        } catch (secondErr) {
+            console.error('❌ All insert attempts failed:', secondErr.message);
             res.status(500).json({ 
                 error: 'Database error',
-                details: err.message
+                details: secondErr.message
             });
         }
     }
 });
 
-// Create tables if they don't exist
-async function createTables() {
-    // Create gps_devices table
-    await pool.execute(`
-        CREATE TABLE IF NOT EXISTS gps_devices (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            device_imei VARCHAR(20) UNIQUE NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
-    
-    // Create gps_data table
-    await pool.execute(`
-        CREATE TABLE IF NOT EXISTS gps_data (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            gps_id INT,
-            latitude DECIMAL(10, 8) NOT NULL,
-            longitude DECIMAL(11, 8) NOT NULL,
-            speed DECIMAL(5, 2) DEFAULT 0,
-            heading DECIMAL(5, 2) DEFAULT 0,
-            battery_voltage DECIMAL(4, 2) DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (gps_id) REFERENCES gps_devices(id) ON DELETE CASCADE,
-            INDEX idx_created_at (created_at)
-        )
-    `);
-    
-    console.log('✅ Database tables created/verified');
-}
+// Get Latest GPS Data
+app.get('/api/gps/latest', async (req, res) => {
+    try {
+        const [rows] = await pool.execute(
+            `SELECT 
+                latitude, 
+                longitude, 
+                speed, 
+                heading as direction,
+                battery_voltage,
+                created_at as timestamp
+             FROM gps_data 
+             ORDER BY created_at DESC 
+             LIMIT 1`
+        );
+        
+        if (rows.length === 0) {
+            return res.json({
+                latitude: 36.8065,
+                longitude: 10.1815,
+                speed: 0,
+                direction: 0,
+                altitude: 0,
+                battery_voltage: 0,
+                timestamp: new Date().toISOString(),
+                message: 'No GPS data available yet'
+            });
+        }
+        
+        const data = rows[0];
+        
+        res.json({
+            latitude: parseFloat(data.latitude),
+            longitude: parseFloat(data.longitude),
+            speed: data.speed || 0,
+            direction: data.direction || 0,
+            altitude: 0,
+            battery_voltage: data.battery_voltage || 0,
+            timestamp: data.timestamp || new Date().toISOString(),
+            source: 'database'
+        });
+        
+    } catch (err) {
+        console.error('❌ Error fetching GPS data:', err.message);
+        res.status(500).json({ 
+            error: 'Database error',
+            details: err.message
+        });
+    }
+});
 
-// Health check endpoint
+// Get GPS History
+app.get('/api/gps/history', async (req, res) => {
+    try {
+        const [rows] = await pool.execute(
+            `SELECT 
+                latitude, 
+                longitude, 
+                speed, 
+                heading as direction,
+                created_at as timestamp
+             FROM gps_data 
+             ORDER BY created_at DESC 
+             LIMIT 10`
+        );
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get All Devices
+app.get('/api/devices', async (req, res) => {
+    try {
+        const [rows] = await pool.execute(
+            `SELECT 
+                d.id,
+                d.device_imei,
+                d.created_at,
+                COUNT(g.id) as total_points,
+                MAX(g.created_at) as last_seen
+             FROM gps_devices d
+             LEFT JOIN gps_data g ON d.id = g.gps_id
+             GROUP BY d.id
+             ORDER BY d.created_at DESC`
+        );
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Health Check
 app.get('/api/health', async (req, res) => {
     try {
         const [result] = await pool.execute('SELECT 1 as ok');
-        res.json({ 
+        
+        // Get stats
+        const [deviceCount] = await pool.execute('SELECT COUNT(*) as count FROM gps_devices');
+        const [dataCount] = await pool.execute('SELECT COUNT(*) as count FROM gps_data');
+        const [latestData] = await pool.execute('SELECT MAX(created_at) as latest FROM gps_data');
+        
+        res.json({
             status: 'healthy',
-            database: 'connected',
-            timestamp: new Date().toISOString(),
-            service: 'GPS WebService',
-            version: '1.0.0'
+            server_time: new Date().toISOString(),
+            uptime: process.uptime(),
+            database: {
+                connected: true,
+                devices: deviceCount[0].count,
+                data_points: dataCount[0].count,
+                latest_data: latestData[0].latest
+            }
         });
     } catch (err) {
         res.status(500).json({ 
             status: 'unhealthy',
             database: 'disconnected',
-            error: err.message,
-            timestamp: new Date().toISOString()
+            error: err.message
         });
+    }
+});
+
+// Clear Database (for testing)
+app.delete('/api/clear', async (req, res) => {
+    try {
+        await pool.execute('DELETE FROM gps_data');
+        await pool.execute('DELETE FROM gps_devices');
+        await pool.execute('ALTER TABLE gps_devices AUTO_INCREMENT = 1');
+        await pool.execute('ALTER TABLE gps_data AUTO_INCREMENT = 1');
+        
+        res.json({
+            success: true,
+            message: 'All data cleared successfully'
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -281,20 +304,25 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// 404 handler
+app.use((req, res) => {
+    res.status(404).json({ error: 'Endpoint not found' });
+});
+
 // Start server
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
     console.log('\n' + '='.repeat(50));
     console.log(`🚀 GPS WebService is LIVE on port ${PORT}`);
     console.log(`🌍 Frontend: http://localhost:${PORT}`);
-    console.log(`📍 API Endpoints:`);
-    console.log(`   GET  /api/gps/latest  - Get latest GPS position`);
-    console.log(`   POST /api/gps/push    - Receive data from ESP32`);
-    console.log(`   GET  /api/health      - Health check`);
-    console.log('='.repeat(50) + '\n');
-    
-    // Create tables on startup
-    createTables().catch(err => {
-        console.error('Table creation error:', err.message);
-    });
+    console.log(`📡 Database: ${process.env.DB_HOST}:${process.env.DB_PORT}`);
+    console.log('='.repeat(50));
+    console.log('\n📊 Available Endpoints:');
+    console.log('   GET  /              - Frontend interface');
+    console.log('   POST /api/gps/push  - Receive GPS data (ESP32)');
+    console.log('   GET  /api/gps/latest- Get latest position');
+    console.log('   GET  /api/health    - System health check');
+    console.log('   GET  /api/devices   - List all devices');
+    console.log('   DELETE /api/clear   - Clear all data (testing)');
+    console.log('\n' + '='.repeat(50) + '\n');
 });
