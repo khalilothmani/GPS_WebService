@@ -73,18 +73,18 @@ The system implements **intelligent motion-based power management** to maximize 
 - **Idle mode** (stationary, SIM800L off): ~100mA → 10-20 hours on 1000mAh battery
 - **Active mode** (moving, SIM800L on): ~400mA → 2.5 hours continuous
 - **Typical usage** (10% active, 90% idle): ~12-15 hours on 1000mAh battery
-- **Stationary vehicle overnight**: Days to weeks depending on GPS power consumption
+- **Stationary person**: Days to weeks depending on GPS power consumption
 
 **Power Consumption Comparison - Average Day (1000mAh Battery):**
 
 | Scenario | Without MOSFET (Always-On) | With MOSFET (Motion-Based) | Power Saved |
 |----------|---------------------------|---------------------------|-------------|
-| **Commuter** (2h drive, 22h parked) | ~4 hours total | ~18 hours total | **4.5x improvement** |
-| **Delivery Vehicle** (8h driving, 16h parked) | ~2.5 hours total | ~8 hours total | **3.2x improvement** |
-| **Parked All Day** (24h stationary) | ~2.5 hours total | ~10+ hours total | **4x improvement** |
-| **Long Distance** (10h continuous) | ~2.5 hours total | ~3 hours total | **1.2x improvement** |
+| **Office Worker** (2h commute/walking, 22h stationary) | ~2.5 hours total | ~8 hours total | **3.2x improvement** |
+| **Active Person** (8h moving, 16h stationary) | ~2.5 hours total | ~4 hours total | **1.6x improvement** |
+| **Sedentary Day** (24h mostly stationary) | ~2.5 hours total | ~10+ hours total | **4x improvement** |
+| **Continuous Activity** (10h continuous movement) | ~2.5 hours total | ~3 hours total | **1.2x improvement** |
 
-**Calculation Details (Average Commuter Day):**
+**Calculation Details (Average Office Worker):**
 
 *Traditional Method (Always-On):*
 - Current draw: Constant 400mA (ESP32 + GPS + SIM800L always powered)
@@ -92,15 +92,15 @@ The system implements **intelligent motion-based power management** to maximize 
 - **Result: Needs charging 2-3 times per day** ⚠️
 
 *MOSFET Method (Motion-Based):*
-- Parked (22h): 100mA (SIM800L OFF)
-- Driving (2h): 400mA (SIM800L ON)
+- Stationary (22h): 100mA (SIM800L OFF - sitting, sleeping, working)
+- Moving (2h): 400mA (SIM800L ON - walking, commuting)
 - Average: (22h × 100mA + 2h × 400mA) ÷ 24h = **125mA**
 - Battery life: 1000mAh ÷ 125mA = **~8 hours**
 - With 2000mAh battery: **~16 hours** ✅
-- **Result: Charge once per day or less**
+- **Result: Charge once per day**
 
 **Why This Matters:**
-Traditional GPS trackers keep cellular modules powered 24/7, draining batteries in hours. Our motion-based approach only uses cellular connectivity when the vehicle is actually moving, extending battery life by **3-5x for typical usage patterns**.
+Traditional GPS trackers keep cellular modules powered 24/7, draining batteries in hours. Our motion-based approach only uses cellular connectivity when the person is actually moving, extending battery life by **3-5x for typical daily usage patterns**.
 
 ### Backend
 - **Node.js** (v16+) - JavaScript runtime

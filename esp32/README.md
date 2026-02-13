@@ -201,20 +201,20 @@ The firmware waits 10 seconds in INIT_STATE to ensure reliable connectivity.
 
 ### Battery Life Estimates
 
-**Scenario 1: Stationary Vehicle (Parked)**
+**Scenario 1: Stationary Person (Sleeping/Working)**
 - 100% IDLE mode
 - Power: 100mA
 - **Battery life: 10+ hours** (limited by GPS power draw)
 
-**Scenario 2: Typical Usage (Delivery Vehicle)**
+**Scenario 2: Typical Usage (Office Worker/Student)**
 - 10% ACTIVE, 90% IDLE
 - Average power: ~130mA
-- **Battery life: 12-15 hours**
+- **Battery life: 12-15 hours** (1000mAh) or **24-30 hours** (2000mAh)
 
-**Scenario 3: Continuous Driving**
+**Scenario 3: Continuous Movement (Hiking/Running)**
 - 100% ACTIVE mode
 - Average power: ~400mA (with transmission bursts)
-- **Battery life: 2.5 hours**
+- **Battery life: 2.5 hours** (1000mAh) or **5 hours** (2000mAh)
 
 ### Power Optimization Tips
 
@@ -290,8 +290,8 @@ MOSFET OFF - SIM800L unpowered
 ### Motion Detection Too Sensitive/Insensitive
 - **Adjust thresholds**: Modify `motionThresholdStart` and `motionThresholdEnd`
 - **Test values**: Monitor accelerometer readings in Serial Monitor
-- **Environment**: Vibrations from engine idle may trigger false positives
-- **Mounting**: Secure device firmly to vehicle chassis
+- **Environment**: Minor body movements when sitting may trigger motion detection
+- **Mounting**: Secure device in pocket, bag, or belt for consistent readings
 
 ## Data Format
 
