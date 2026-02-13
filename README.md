@@ -18,7 +18,7 @@ webServGPS-clean/
 ├── database/              # Aiven MySQL database schema
 │   ├── aiven-schema.sql  # Complete database setup
 │   └── README.md         # Database setup guide
-├── esp32-arduino/        # ESP32 + GPS + SIM800L code
+├── esp32/                # ESP32 + GPS + SIM800L + Power Management
 │   ├── esp32_gps_sim800l.ino  # Arduino sketch
 │   └── README.md         # Hardware setup guide
 ├── public/               # Web dashboard
@@ -28,19 +28,6 @@ webServGPS-clean/
 ├── index.js            # Node.js Express server
 ├── package.json        # Dependencies
 └── README.md           # This file
-```
-
-## Environment Variables
-
-Create a `.env` file with:
-
-```
-DB_HOST=your-aiven-host.aivencloud.com
-DB_USER=your-username
-DB_PASS=your-password
-DB_NAME=your-database
-DB_PORT=your-port
-PORT=10000
 ```
 
 ## Installation
@@ -71,18 +58,20 @@ npm start
 
 ## Deployment
 
-### Render
+### Render + Aiven
 
-1. Create new Web Service
-2. Connect GitHub repository
-3. Set environment variables in Render dashboard
-4. Deploy
+1. Push code to GitHub
+2. Create MySQL service on Aiven (get connection details)
+3. Create new Web Service on Render
+4. Connect your GitHub repository
+5. **Configure environment variables in Render dashboard:**
+   - `DB_HOST`, `DB_USER`, `DB_PASS`, `DB_NAME`, `DB_PORT` (from Aiven)
+   - `PORT=10000`
+6. Deploy
 
-### Aiven Database
+**See [DEPLOYMENT.md](DEPLOYMENT.md) for complete step-by-step deployment guide with screenshots and troubleshooting.**
 
-1. Create MySQL service on Aiven
-2. Copy connection details to `.env`
-3. Database tables will be created automatically on first run
+Database tables are created automatically on first run.
 
 ## ESP32 Integration
 
@@ -101,20 +90,34 @@ Send POST request to `/api/gps/push` with JSON:
 
 ## Hardware Setup
 
-### ESP32 with SIM800L
+### ESP32 Power-Efficient GPS Tracker
 
-See [`esp32-arduino/README.md`](esp32-arduino/README.md) for complete setup instructions including:
+**Complete Hardware Components:**
+- ESP32 DevKit (WiFi microcontroller)
+- NEO-6M GPS Module (location tracking)
+- SIM800L GSM/GPRS (cellular connectivity)
+- ADXL345 Accelerometer GY-291 (motion detection)
+- AO3415A P-Channel MOSFET (power control)
+- TP4056 Charging Module (battery management)
+- 3.7V LiPo Battery (1000-2000mAh)
 
-- Hardware wiring diagram
+**Power Efficiency:**
+The system uses **motion-based power management** - the SIM800L cellular module is only powered when movement is detected by the accelerometer. This extends battery life from ~2.5 hours to **12-15 hours** for typical usage.
+
+See [`esp32/README.md`](esp32/README.md) for complete setup instructions including:
+
+- Complete wiring diagram with all components
+- MOSFET power control circuit
 - Required Arduino libraries
-- Configuration steps
+- Configuration and tuning
+- Power consumption details
 - Troubleshooting guide
 
 **Quick Start:**
-1. Wire GPS module and SIM800L to ESP32
-2. Install required libraries (TinyGPS++, TinyGSM, ArduinoJson)
+1. Wire all components according to diagram in `esp32/README.md`
+2. Install libraries (TinyGPS++, TinyGSM, ArduinoJson, Adafruit_ADXL345)
 3. Update APN and server URL in `.ino` file
-4. Upload to ESP32
+4. Upload to ESP32 and monitor Serial output
 
 ### Database Setup
 

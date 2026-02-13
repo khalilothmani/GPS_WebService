@@ -89,7 +89,7 @@ SELECT * FROM gps_data;
 
 If not already done:
 ```bash
-cd webServGPS-clean
+cd webServGPS
 git init
 git add .
 git commit -m "Initial commit"
@@ -469,5 +469,5 @@ curl https://your-service.onrender.com/api/health
 
 ---
 
-**Last Updated:** February 2026  
-**Maintained by:** Khalil Othmani
+ 
+**Maintained by:** Mohamed Khalil Othmani
