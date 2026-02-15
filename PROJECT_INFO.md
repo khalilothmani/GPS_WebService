@@ -229,15 +229,17 @@ Traditional GPS trackers keep cellular modules powered 24/7, draining batteries 
      - `TinyGSM` (if using SIM800L)
 
 3. **Configure ESP32 Code**
-   - Open `esp32-arduino/espCodeTest.ino`
-   - Update WiFi credentials:
+   - Open `esp32/esp32_gps_sim800l.ino`
+   - Update APN settings (check your SIM card provider):
      ```cpp
-     const char* ssid = "YourWiFiName";
-     const char* password = "YourWiFiPassword";
+     const char apn[]      = "internet"; // Replace with your APN
+     const char gprsUser[] = ""; // Replace if required
+     const char gprsPass[] = ""; // Replace if required
      ```
    - Update server URL:
      ```cpp
-     const char* serverName = "https://gps-webservice.onrender.com/api/gps/push";
+     const char server[]   = "gps-webservice.onrender.com";
+     const char endpoint[] = "/api/gps/push";
      ```
 
 4. **Upload Code**
@@ -248,8 +250,9 @@ Traditional GPS trackers keep cellular modules powered 24/7, draining batteries 
    - Open Serial Monitor (115200 baud)
 
 5. **Verify Operation**
-   - Check Serial Monitor for "WiFi Connected"
-   - Watch for "Server Response Code: 200"
+   - Check Serial Monitor for "Initializing SIM800L modem..."
+   - Watch for "Connected to network" and "Connected to GPRS"
+   - Watch for "Data sent! Battery: ..."
    - Check web dashboard for incoming data
 
 ### Step 4: Testing and Verification
@@ -414,24 +417,27 @@ Stores GPS location points
 
 ## Troubleshooting
 
-### ESP32 Issues
+### ESP32 & SIM800L Issues
 
-**WiFi won't connect**
-- Check SSID and password spelling
-- Ensure 2.4GHz WiFi (ESP32 doesn't support 5GHz)
-- Try moving closer to router
-- Check Serial Monitor for error messages
-
-**HTTPS errors**
-- Ensure `client->setInsecure()` is called
-- Check server URL has `https://`
-- Verify server is running (check Render dashboard)
-
-**No GPS fix** (if using real GPS module)
-- GPS needs clear sky view
-- Wait 30-60 seconds for first fix
+**SIM800L won't connect to network**
+- Check SIM card valididity and data plan
+- Ensure power supply is sufficient (SIM800L needs up to 2A bursts)
 - Check antenna connection
-- Verify GPS TX/RX wiring
+- Verify APN settings are correct for your carrier
+- LED Status:
+  - Blinking every 1s: Searching for network
+  - Blinking every 3s: Connected to network
+
+**HTTPS errors / Data not sending**
+- SIM800L may need `client->setInsecure()` context or SSL certification handling (TinyGSM usually handles this, but verify library version)
+- Check server URL is correct
+- Verify server is running
+
+**No GPS fix**
+- GPS needs clear sky view (outdoors)
+- Wait 30-60 seconds for first fix (Cold Start)
+- Check GPS antenna connection
+- Verify GPS TX/RX wiring (TX->RX, RX->TX)
 
 ### Server Issues
 
