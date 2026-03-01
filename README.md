@@ -141,13 +141,13 @@ Send a `POST` request to `/api/gps/push` with the following JSON payload:
 ### 📦 Prototype
 
 <p align="center">
-  <img src="./prototype_photo.jpg" alt="GPS Tracker Prototype" width="650"/>
+  <img src="prototype_photo.jpg" alt="GPS Tracker Prototype" width="650"/>
 </p>
 
 ### 🧩 Circuit Diagram
 
 <p align="center">
-  <img src="./circuit.png" alt="ESP32 GPS Circuit Diagram" width="750"/>
+  <img src="circuit.png" alt="ESP32 GPS Circuit Diagram" width="750"/>
 </p>
 
 ### 🔋 ESP32 Power-Efficient GPS Tracker
