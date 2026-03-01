@@ -13,7 +13,7 @@
 ## 🚀 Live Dashboard Preview
 
 <p align="center">
-  <img src="./dashboard_screenshot.png" alt="Live GPS Dashboard" width="900"/>
+  <img src="dashboard_screenshot.png" alt="Live GPS Dashboard" width="900"/>
 </p>
 
 > A complete GPS Tracking System built from scratch — collecting real-time location data from embedded hardware and streaming it to a live web dashboard.
